@@ -5,9 +5,23 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <canvas id="myCanvas"></canvas>
+
+
+    <canvas id="carCanvas"></canvas>
+   
+    <div id="verticalButtons">
+        <button onclick="save()">💾</button>
+        <button onclick="discard()">🗑️</button>
+    </div>
+
+    <canvas id="networkCanvas"></canvas>
     <!-- import the car -->
     <script src="Car.js"></script>
+    <script src="Visualizer.js"></script>
+    <script src="Network.js"></script>
+    <script src="Util.js"></script>
+    <script src="Sensor.js"></script>
+    <script src="Road.js"></script>
     <script src="Controls.js"></script>
     <script src="main.js"></script>
 

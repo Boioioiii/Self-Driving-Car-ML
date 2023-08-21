@@ -1,21 +1,74 @@
 //Set up the road on the screen
-const canvas = document.getElementById("myCanvas");
-canvas.width = 200;
+const carCanvas = document.getElementById("carCanvas");
+carCanvas.width = 200;
+
+const networkCanvas = document.getElementById("networkCanvas");
+networkCanvas.width = 300;
 
 //Set up the car
-const ctx = canvas.getContext("2d");
-//x,y,width,height
-const car = new Car(100, 100, 30, 50);
+const carCtx = carCanvas.getContext("2d");
 
-//draw the car
-car.draw(ctx);
+const networkCtx = networkCanvas.getContext("2d");
+
+const road = new Road(carCanvas.width / 2, carCanvas.width * 0.9);
+//x,y,width,height
+//const car = new Car(road.getLaneCenter(1), 100, 30, 50, "AI");
+
+const N = 100;
+const cars = generateCars(N);
+let bestCar = cars[0];
+
+//Store and have the brain learn which path is best
+if (localStorage.getItem("bestBrain")) {
+  for (let i = 0; i < cars.length; i++) {
+    cars[i].brain = JSON.parse(localStorage.getItem("bestBrain"));
+    if (i != 0) {
+      NeuroNetwork.mutate(cars[i].brain, 0.1);
+    }
+  }
+}
+
+const traffic = [
+  new Car(road.getLaneCenter(1), -100, 30, 50, "DUMMY", 2),
+  new Car(road.getLaneCenter(0), -300, 30, 50, "DUMMY", 2),
+  new Car(road.getLaneCenter(2), -300, 30, 50, "DUMMY", 2),
+  new Car(road.getLaneCenter(0), -500, 30, 50, "DUMMY", 2),
+  new Car(road.getLaneCenter(1), -500, 30, 50, "DUMMY", 2),
+  new Car(road.getLaneCenter(1), -700, 30, 50, "DUMMY", 2),
+  new Car(road.getLaneCenter(2), -700, 30, 50, "DUMMY", 2),
+];
 
 //Update teh car animation based on keypress
 animate();
 
-function animate() {
-  car.update();
+function save() {
+  localStorage.setItem("bestBrain", JSON.stringify(bestCar.brain));
+}
 
+function discard() {
+  localStorage.removeItem("bestBrain");
+}
+
+function generateCars(N) {
+  const cars = [];
+  for (let i = 1; i <= N; i++) {
+    cars.push(new Car(road.getLaneCenter(1), 100, 30, 50, "AI"));
+  }
+  return cars;
+}
+
+function animate(time) {
+  for (let i = 0; i < traffic.length; i++) {
+    traffic[i].update(road.borders, []);
+  }
+
+  for (let i = 0; i < cars.length; i++) {
+    cars[i].update(road.borders, traffic);
+  }
+
+  //car.update(road.borders, traffic);
+
+  bestCar = cars.find((c) => c.y == Math.min(...cars.map((c) => c.y)));
   //this makes the canvas the size of the screen
   //this is so that the car can move around the entire screen
   //without this, the car would be stuck in a small box
@@ -24,9 +77,30 @@ function animate() {
   //This gives the illusion that the car is moving around the screen, since it actually a small grey screen, that refreshes
   //when the car position changes. This will erase the old car position and allow the new car position to be drawn on a
   //empty gray road
-  canvas.height = window.innerHeight;
+  carCanvas.height = window.innerHeight;
+  networkCanvas.height = window.innerHeight;
 
-  car.draw(ctx);
+  carCtx.save();
+  carCtx.translate(0, -bestCar.y + carCanvas.height * 0.7);
+  road.draw(carCtx);
+
+  for (let i = 0; i < traffic.length; i++) {
+    traffic[i].draw(carCtx, "red");
+  }
+
+  carCtx.globalAlpha = 0.2;
+
+  for (let i = 0; i < cars.length; i++) {
+    cars[i].draw(carCtx, "blue");
+  }
+
+  carCtx.globalAlpha = 1;
+  ///car.draw(carCtx, "blue");
+  bestCar.draw(carCtx, "blue", true);
+  carCtx.restore();
+
+  networkCtx.lineDashOffset = -time / 50;
+  Visualizer.drawNetwork(networkCtx, bestCar.brain);
 
   //request animation frame calls the animate method again and again many fps which gives the illusion of movement.
   requestAnimationFrame(animate);
